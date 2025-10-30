@@ -1,0 +1,21 @@
+{
+  "name": "overpowered-bot",
+  "version": "1.0.0",
+  "description": "Server moderation bot with custom bot creation and explore page",
+  "type": "module",
+  "main": "bot.nev-1.1/netlify/functions/overpoweredbot.js",
+  "scripts": {
+    "dev": "netlify dev",
+    "start": "node bot.nev-1.1/netlify/functions/overpoweredbot.js",
+    "explore": "node bot.nev-1.1/netlify/functions/generateExplore.js"
+  },
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.57.0",
+    "dotenv": "^16.3.1"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

@@ -1,15 +1,13 @@
 import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
-import fetch from 'node-fetch';
 import readline from 'readline';
 
 // ---------------------- Supabase Client ----------------------
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_KEY;
-const OPEN_ROUTER_API_KEY = process.env.OPEN_ROUTER_API_KEY;
 
-if (!SUPABASE_URL || !SUPABASE_KEY || !OPEN_ROUTER_API_KEY) {
+if (!SUPABASE_URL || !SUPABASE_KEY) {
   console.error("❌ Missing environment variables!");
   process.exit(1);
 }
@@ -38,6 +36,17 @@ function generateUserFiles(description, apiKey) {
     "bot.js": `// Auto-generated bot
 const API_KEY = "${apiKey}";
 const description = "${description}";
+
+function respond(message) {
+  // Simple local AI: replies based on description
+  return "You said: '" + message + "'. " + description;
+}
+
+process.stdin.on('data', (data) => {
+  const msg = data.toString().trim();
+  console.log("[Bot Reply]: " + respond(msg));
+});
+
 console.log("Bot is ready!");`
   };
 }
@@ -73,34 +82,6 @@ async function listBots() {
   return bots || [];
 }
 
-// ---------------------- OpenRouter GPT-5 Response ----------------------
-async function getAIResponse(botDescription, userMessage) {
-  const prompt = `You are a bot with this description: "${botDescription}". Respond conversationally to the user message: "${userMessage}".`;
-
-  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${OPEN_ROUTER_API_KEY}`,
-      "HTTP-Referer": "https://your-app-domain.com", // optional but recommended
-      "X-Title": "Overpowered Bot",
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      model: "gpt-5",
-      messages: [{ role: "user", content: prompt }]
-    })
-  });
-
-  if (!res.ok) {
-    const errText = await res.text();
-    console.error("❌ OpenRouter API Error:", res.status, errText);
-    return "⚠️ Bot failed to respond (OpenRouter error)";
-  }
-
-  const data = await res.json();
-  return data?.choices?.[0]?.message?.content?.trim() || "🤖 No reply generated.";
-}
-
 // ---------------------- Netlify Function Handler ----------------------
 export async function handler(event) {
   try {
@@ -118,13 +99,13 @@ export async function handler(event) {
       return { statusCode: 200, body: JSON.stringify(bots) };
     }
 
-    // Get bot details (or respond)
+    // Get bot details or respond using local description
     if (action === 'getbot' && id) {
       const { data: bot, error } = await supabase.from('sites').select('*').eq('hash', id).single();
       if (error || !bot) return { statusCode: 404, body: JSON.stringify({ error: "Bot not found" }) };
 
       if (userMessage) {
-        const reply = await getAIResponse(bot.description, userMessage);
+        const reply = `You said: '${userMessage}'. ${bot.description}`;
         return { statusCode: 200, body: JSON.stringify({ ...bot, reply }) };
       }
 

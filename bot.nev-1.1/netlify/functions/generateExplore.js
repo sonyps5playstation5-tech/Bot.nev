@@ -1,15 +1,15 @@
 import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
-import fetch from 'node-fetch'; // Make sure node-fetch is installed
+import fetch from 'node-fetch';
 import readline from 'readline';
 
 // ---------------------- Supabase Client ----------------------
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_KEY;
-const HF_TOKEN = process.env.HF_TOKEN;
+const OPEN_ROUTER_API_KEY = process.env.OPEN_ROUTER_API_KEY;
 
-if (!SUPABASE_URL || !SUPABASE_KEY || !HF_TOKEN) {
+if (!SUPABASE_URL || !SUPABASE_KEY || !OPEN_ROUTER_API_KEY) {
   console.error("❌ Missing environment variables!");
   process.exit(1);
 }
@@ -73,24 +73,32 @@ async function listBots() {
   return bots || [];
 }
 
-// ---------------------- Hugging Face AI Response ----------------------
+// ---------------------- OpenRouter GPT-5 Response ----------------------
 async function getAIResponse(botDescription, userMessage) {
-  const prompt = `You are a bot with this description: "${botDescription}". Respond conversationally to the user: "${userMessage}"`;
-  
-  const res = await fetch('https://api-inference.huggingface.co/models/gpt2', {
-    method: 'POST',
+  const prompt = `You are a bot with this description: "${botDescription}". Respond conversationally to the user message: "${userMessage}".`;
+
+  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
     headers: {
-      'Authorization': `Bearer ${HF_TOKEN}`,
-      'Content-Type': 'application/json'
+      "Authorization": `Bearer ${OPEN_ROUTER_API_KEY}`,
+      "HTTP-Referer": "https://your-app-domain.com", // optional but recommended
+      "X-Title": "Overpowered Bot",
+      "Content-Type": "application/json"
     },
-    body: JSON.stringify({ inputs: prompt })
+    body: JSON.stringify({
+      model: "gpt-5",
+      messages: [{ role: "user", content: prompt }]
+    })
   });
 
+  if (!res.ok) {
+    const errText = await res.text();
+    console.error("❌ OpenRouter API Error:", res.status, errText);
+    return "⚠️ Bot failed to respond (OpenRouter error)";
+  }
+
   const data = await res.json();
-  if (data.error) return "⚠️ Bot AI failed to respond";
-  
-  // Hugging Face returns generated_text
-  return data[0]?.generated_text?.replace(prompt, '').trim() || "🤖 No reply generated";
+  return data?.choices?.[0]?.message?.content?.trim() || "🤖 No reply generated.";
 }
 
 // ---------------------- Netlify Function Handler ----------------------
@@ -110,12 +118,11 @@ export async function handler(event) {
       return { statusCode: 200, body: JSON.stringify(bots) };
     }
 
-    // Get bot details
+    // Get bot details (or respond)
     if (action === 'getbot' && id) {
       const { data: bot, error } = await supabase.from('sites').select('*').eq('hash', id).single();
       if (error || !bot) return { statusCode: 404, body: JSON.stringify({ error: "Bot not found" }) };
-      
-      // If userMessage provided, generate AI reply
+
       if (userMessage) {
         const reply = await getAIResponse(bot.description, userMessage);
         return { statusCode: 200, body: JSON.stringify({ ...bot, reply }) };
@@ -124,7 +131,7 @@ export async function handler(event) {
       return { statusCode: 200, body: JSON.stringify(bot) };
     }
 
-    // Create bot
+    // Create new bot
     if (method === 'POST' && description) {
       const result = await createBot(description);
       if (result.error) return { statusCode: 500, body: JSON.stringify(result) };

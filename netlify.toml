@@ -1,18 +1,27 @@
 [build]
-  publish = "."
-  functions = "netlify/functions"
+  # Publish folder points to the unzipped bot folder
+  publish = "bot.nev-1.1"
+  
+  # Functions folder is inside the same folder
+  functions = "bot.nev-1.1/netlify/functions"
 
+# Redirect for the Explore page function
 [[redirects]]
   from = "/explore"
   to = "/.netlify/functions/generateExplore"
   status = 200
+  force = true
 
+# Redirect for bot creation function
 [[redirects]]
   from = "/api/overpoweredbot"
   to = "/.netlify/functions/overpoweredbot"
   status = 200
+  force = true
 
+# SPA fallback: serve index.html for all other routes
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
+  force = true

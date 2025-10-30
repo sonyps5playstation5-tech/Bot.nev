@@ -1,0 +1,18 @@
+[build]
+  publish = "."
+  functions = "netlify/functions"
+
+[[redirects]]
+  from = "/explore"
+  to = "/.netlify/functions/generateExplore"
+  status = 200
+
+[[redirects]]
+  from = "/api/overpoweredbot"
+  to = "/.netlify/functions/overpoweredbot"
+  status = 200
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

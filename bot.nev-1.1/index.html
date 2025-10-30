@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Create a Bot</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f9fafc;
+      margin: 0;
+      padding: 40px;
+      text-align: center;
+    }
+    h1 {
+      color: #333;
+    }
+    form {
+      margin: 20px auto;
+      max-width: 500px;
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    textarea {
+      width: 100%;
+      height: 100px;
+      margin-bottom: 15px;
+      padding: 10px;
+      font-size: 14px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      resize: none;
+    }
+    button {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    .output {
+      margin-top: 20px;
+      font-family: monospace;
+      padding: 15px;
+      border-radius: 6px;
+    }
+    .output.success {
+      background: #e6ffed;
+      color: #256d1b;
+      border: 1px solid #8dd48a;
+    }
+    .output.error {
+      background: #ffe6e6;
+      color: #a12626;
+      border: 1px solid #f5a3a3;
+    }
+    .nav-links {
+      margin-top: 20px;
+    }
+    .nav-links a {
+      margin: 0 10px;
+      text-decoration: none;
+      color: #007bff;
+    }
+    .nav-links a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🤖 Create Your Custom Bot</h1>
+
+  <form id="botForm">
+    <textarea id="description" placeholder="Describe your bot..."></textarea>
+    <br>
+    <button type="submit">Create Bot</button>
+  </form>
+
+  <div id="output" class="output"></div>
+
+  <div class="nav-links">
+    <a href="/explore.html">🔍 Explore Bots</a>
+  </div>
+
+  <script>
+    const form = document.getElementById('botForm');
+    const output = document.getElementById('output');
+
+    const createBotPath = window.location.hostname.includes('localhost')
+      ? '/netlify/functions/overpoweredbot'
+      : '/.netlify/functions/overpoweredbot';
+
+    const generateExplorePath = window.location.hostname.includes('localhost')
+      ? '/netlify/functions/generateExplore'
+      : '/.netlify/functions/generateExplore';
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const description = document.getElementById('description').value.trim();
+
+      if (!description) {
+        output.textContent = 'Please enter a description.';
+        output.className = 'output error';
+        return;
+      }
+
+      output.textContent = 'Creating bot...';
+      output.className = 'output';
+
+      try {
+        const res = await fetch(createBotPath, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ description })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok || data.error) {
+          output.textContent = `Error creating bot: ${data.error || 'Unknown error'}`;
+          output.className = 'output error';
+          return;
+        }
+
+        output.innerHTML = `
+          <strong>Bot Created Successfully!</strong><br>
+          ID/Hash: ${data.hash || 'N/A'}<br>
+          API Key: ${data.apiKey || 'Check Supabase'}<br>
+          File: bot.js<br><br>
+          <a href="/explore.html">🔍 View Explore Page</a> |
+          <a href="/index.html">⚙️ Create Another</a>
+        `;
+        output.className = 'output success';
+        form.reset();
+
+      } catch (err) {
+        console.error(err);
+        output.textContent = 'Failed to create bot.';
+        output.className = 'output error';
+      }
+    });
+  </script>
+</body>
+</html>
